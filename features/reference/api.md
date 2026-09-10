@@ -1,6 +1,6 @@
 # API Reference
 
-**Status:** Feature 1–4 — Auth + Lists + Todo items + Profile
+**Status:** Feature 1–5 — Auth + Lists + Todo items + Profile + Due dates
 
 API mount path: `/todo` (see `backend/server.js`). Authenticated routes require `Authorization: Bearer <token>`.
 
@@ -17,8 +17,8 @@ API mount path: `/todo` (see `backend/server.js`). Authenticated routes require 
 | `PUT` | `/todo/lists/:listId` | Yes | Rename an owned list |
 | `DELETE` | `/todo/lists/:listId` | Yes | Delete an owned list |
 | `GET` | `/todo/lists/:listId/todos` | Yes | Fetch todos in an owned list (incomplete first, then `createdAt`) |
-| `POST` | `/todo/lists/:listId/todos` | Yes | Add a todo to an owned list |
-| `PUT` | `/todo/todos/:id` | Yes | Update a todo title and/or `completed` |
+| `POST` | `/todo/lists/:listId/todos` | Yes | Add a todo to an owned list (optional `dueDate`) |
+| `PUT` | `/todo/todos/:id` | Yes | Update a todo title, `completed`, and/or `dueDate` |
 | `DELETE` | `/todo/todos/:id` | Yes | Delete an owned todo |
 | `GET` | `/todo/users/:id` | Yes | Fetch the authenticated user's profile |
 | `PUT` | `/todo/users/:id` | Yes | Update the authenticated user's profile |
@@ -90,10 +90,10 @@ Username is stored lowercase. Default role is `worker`. Password minimum length 
 ## Todo create request
 
 ```json
-{ "title": "Buy milk" }
+{ "title": "Buy milk", "dueDate": "2026-07-15" }
 ```
 
-`userId` and `listId` in the body are ignored. Ownership is `req.user.id`; `listId` comes from the path after the parent list is verified.
+`userId` and `listId` in the body are ignored. Ownership is `req.user.id`; `listId` comes from the path after the parent list is verified. `dueDate` is optional (`YYYY-MM-DD` or omit/`null`).
 
 ## Todo success (`200` / `201`)
 
@@ -103,13 +103,14 @@ Username is stored lowercase. Default role is `worker`. Password minimum length 
   "listId": 1,
   "title": "Buy milk",
   "completed": false,
+  "dueDate": "2026-07-15",
   "userId": 42,
   "createdAt": "2026-07-02T12:05:00.000Z",
   "updatedAt": "2026-07-02T12:05:00.000Z"
 }
 ```
 
-New todos default to `completed: false`. `GET /todo/lists/:listId/todos` returns an array ordered incomplete first, then by `createdAt` ascending.
+New todos default to `completed: false`. `dueDate` is `null` when not set. `GET /todo/lists/:listId/todos` returns an array ordered incomplete first, then by `createdAt` ascending. `PUT` may send `dueDate: null` to clear; omitting `dueDate` leaves the stored value unchanged.
 
 ## Profile update request
 
@@ -148,7 +149,7 @@ Password hashes are never returned. `GET` and `PUT` succeed only when `:id` is t
 
 | Status | When |
 |--------|------|
-| `400` | Missing/invalid registration or login fields; duplicate username (`Username is already taken.`); duplicate email (`Email is already registered.`); empty list name; list name longer than 100 characters; invalid `listId`; empty todo title; todo title longer than 255 characters; missing profile fields (`First name is required.`); short profile password (`Password must be at least 8 characters.`) |
+| `400` | Missing/invalid registration or login fields; duplicate username (`Username is already taken.`); duplicate email (`Email is already registered.`); empty list name; list name longer than 100 characters; invalid `listId`; empty todo title; todo title longer than 255 characters; invalid todo due date (`Due date must be a valid date in YYYY-MM-DD format.`); missing profile fields (`First name is required.`); short profile password (`Password must be at least 8 characters.`) |
 | `401` | Invalid username or password; missing, expired, or revoked session token (`Unauthorized! …`) |
 | `404` | List, todo, or user not found or not owned (`List with id=<id> not found.` / `Todo with id=<id> not found.` / `User with id=<id> not found.`) |
 
@@ -166,3 +167,4 @@ Password hashes are never returned. `GET` and `PUT` succeed only when `:id` is t
 | Lists CRUD | Feature 2 |
 | Todo items CRUD | Feature 3 |
 | User profile GET / PUT | Feature 4 |
+| Todo due dates | Feature 5 |

@@ -6,6 +6,8 @@ import {
 } from "../authorization/authorization.js";
 
 const MAX_TODO_TITLE_LENGTH = 255;
+const DATE_ONLY_REGEX = /^\d{4}-\d{2}-\d{2}$/;
+const INVALID_DUE_DATE = "Due date must be a valid date in YYYY-MM-DD format.";
 const exports = {};
 
 function parseId(rawId) {
@@ -23,6 +25,39 @@ function validateTitle(rawTitle) {
   }
 
   return null;
+}
+
+function isValidDueDate(value) {
+  if (!DATE_ONLY_REGEX.test(value)) {
+    return false;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day
+  );
+}
+
+function parseDueDate(body) {
+  if (!Object.prototype.hasOwnProperty.call(body ?? {}, "dueDate")) {
+    return { omitted: true };
+  }
+
+  const raw = body.dueDate;
+  if (raw === null || raw === "") {
+    return { value: null };
+  }
+
+  const date = String(raw).trim();
+  if (!isValidDueDate(date)) {
+    return { error: INVALID_DUE_DATE };
+  }
+
+  return { value: date };
 }
 
 exports.findAll = async (req, res) => {
@@ -63,6 +98,12 @@ exports.create = async (req, res) => {
     return res.status(400).send({ message: titleError });
   }
 
+  const dueDateResult = parseDueDate(req.body);
+  if (dueDateResult.error) {
+    logger.warn(`todos.create rejected: ${dueDateResult.error}`);
+    return res.status(400).send({ message: dueDateResult.error });
+  }
+
   try {
     const list = await getAccessibleListOrNull(req, listId);
     if (!list) {
@@ -72,6 +113,7 @@ exports.create = async (req, res) => {
     const todo = await db.todo.create({
       title: String(req.body.title).trim(),
       completed: false,
+      dueDate: dueDateResult.omitted ? null : dueDateResult.value,
       listId: list.id,
       userId: req.user.id,
     });
@@ -99,6 +141,15 @@ exports.update = async (req, res) => {
 
   if (Object.prototype.hasOwnProperty.call(req.body ?? {}, "completed")) {
     patch.completed = Boolean(req.body.completed);
+  }
+
+  const dueDateResult = parseDueDate(req.body);
+  if (dueDateResult.error) {
+    logger.warn(`todos.update rejected: ${dueDateResult.error}`);
+    return res.status(400).send({ message: dueDateResult.error });
+  }
+  if (!dueDateResult.omitted) {
+    patch.dueDate = dueDateResult.value;
   }
 
   try {

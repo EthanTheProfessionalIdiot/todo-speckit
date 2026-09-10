@@ -6,9 +6,11 @@ export default {
   },
 
   createTodo(listId, todo) {
-    return apiClient.post(`lists/${listId}/todos`, {
-      title: todo.title,
-    });
+    const payload = { title: todo.title };
+    if (todo.dueDate) {
+      payload.dueDate = todo.dueDate;
+    }
+    return apiClient.post(`lists/${listId}/todos`, payload);
   },
 
   updateTodo(todoId, todo) {

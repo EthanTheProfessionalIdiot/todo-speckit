@@ -47,6 +47,8 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Items dialog empty copy: **"No todos in this list yet."** | `Dashboard.vue` | Feature 3 |
 | **+ Add Item** exists only inside the items dialog | `Dashboard.vue` | Feature 3 |
 | Completed todos are struck-through / muted | `Dashboard.vue` | Feature 3 |
+| Todo rows show formatted due date when set | `Dashboard.vue` | Feature 5 |
+| Incomplete todos with `dueDate` before today use overdue (error) styling on the date | `isTodoOverdue` | Feature 5 |
 | `MenuBar` user icon opens a profile dropdown (full name, username, email); **Edit Profile** and **Log out** live in the dropdown | `MenuBar.vue` | Feature 4 |
 | No standalone **Sign out** on the app bar | `MenuBar.vue` | Feature 4 |
 | After profile save, refresh `localStorage` `user` and dispatch `user-logged-in` | `MenuBar.vue` | Feature 4 |
@@ -71,6 +73,7 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Todos ordered incomplete first, then `createdAt` ascending | `findAll` order | Feature 3 |
 | Deleting a list **cascades** to its todos | `List hasMany Todo` `onDelete: CASCADE` | Feature 3 |
 | Profile read/update only for `req.user.id` | `getAccessibleUserOrNull` | Feature 4 |
+| `dueDate` optional; `null` means none; omit on `PUT` leaves existing value | `todo.controller` | Feature 5 |
 
 ## List validation
 
@@ -83,3 +86,4 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Profile required fields trimmed; empty first name → **"First name is required."** | Vue rules + `user.controller` | Feature 4 |
 | Optional profile password, when present, must be at least 8 characters | Vue rules + controller | Feature 4 |
 | Edit Profile uses shared `emailRules` | `MenuBar.vue` | Feature 4 |
+| Invalid todo `dueDate` → `400` **"Due date must be a valid date in YYYY-MM-DD format."** | `todo.controller` | Feature 5 |

@@ -1,6 +1,6 @@
 # Data Model Reference
 
-**Status:** Feature 1–4 — Auth + Lists + Todo items + Profile
+**Status:** Feature 1–5 — Auth + Lists + Todo items + Profile + Due dates
 
 ## Tables
 
@@ -44,6 +44,7 @@
 | `listId` | INTEGER FK | Required; references `lists.id`; cascade delete with parent list |
 | `title` | STRING(255) | Required; trimmed; max 255 characters |
 | `completed` | BOOLEAN | Default `false` |
+| `dueDate` | DATEONLY | Nullable; optional on create/update; `YYYY-MM-DD` |
 | `userId` | INTEGER FK | Required; references `users.id`; set from `req.user.id` on create |
 | `createdAt` | DATE | Sequelize timestamps |
 | `updatedAt` | DATE | Sequelize timestamps |
@@ -67,3 +68,4 @@
 | Lists | Feature 2 |
 | Todos | Feature 3 |
 | Profile update of existing user fields | Feature 4 |
+| Todo `dueDate` | Feature 5 |
