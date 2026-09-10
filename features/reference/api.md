@@ -1,6 +1,6 @@
 # API Reference
 
-**Status:** Feature 1 — User Authentication & Session Management
+**Status:** Feature 1–2 — Auth + Todo List Management
 
 API mount path: `/todo` (see `backend/server.js`). Authenticated routes require `Authorization: Bearer <token>`.
 
@@ -12,7 +12,10 @@ API mount path: `/todo` (see `backend/server.js`). Authenticated routes require 
 | `POST` | `/todo/register` | No | Create a user and session |
 | `POST` | `/todo/login` | No | Authenticate and return (or reuse) a session |
 | `POST` | `/todo/logout` | Yes | Invalidate the current session token |
-| `GET` | `/todo/lists` | Yes | Auth probe: returns `[]` until Feature 2 list CRUD |
+| `GET` | `/todo/lists` | Yes | Fetch all lists owned by the authenticated user, A–Z by name |
+| `POST` | `/todo/lists` | Yes | Create a list owned by the authenticated user |
+| `PUT` | `/todo/lists/:listId` | Yes | Rename an owned list |
+| `DELETE` | `/todo/lists/:listId` | Yes | Delete an owned list |
 
 ## Register / login success (flat JSON)
 
@@ -56,14 +59,37 @@ Username is stored lowercase. Default role is `worker`. Password minimum length 
 }
 ```
 
+## List create request
+
+```json
+{ "name": "Groceries" }
+```
+
+`userId` in the body is ignored. Ownership is always `req.user.id`.
+
+## List success (`200` / `201`)
+
+```json
+{
+  "id": 1,
+  "name": "Groceries",
+  "userId": 42,
+  "createdAt": "2026-07-02T12:00:00.000Z",
+  "updatedAt": "2026-07-02T12:00:00.000Z"
+}
+```
+
+`GET /todo/lists` returns an array of these objects, sorted alphabetically by `name`.
+
 ## Errors
 
 `{ "message": "Human-readable explanation." }`
 
 | Status | When |
 |--------|------|
-| `400` | Missing/invalid registration or login fields; duplicate username (`Username is already taken.`); duplicate email (`Email is already registered.`) |
+| `400` | Missing/invalid registration or login fields; duplicate username (`Username is already taken.`); duplicate email (`Email is already registered.`); empty list name; list name longer than 100 characters; invalid `listId` |
 | `401` | Invalid username or password; missing, expired, or revoked session token (`Unauthorized! …`) |
+| `404` | List not found or not owned (`List with id=<id> not found.`) |
 
 ## Conventions
 
@@ -76,4 +102,4 @@ Username is stored lowercase. Default role is `worker`. Password minimum length 
 | Area | Introduced |
 |-------|------------|
 | Auth register / login / logout | Feature 1 |
-| `GET /todo/lists` empty auth probe | Feature 1 |
+| Lists CRUD | Feature 2 |

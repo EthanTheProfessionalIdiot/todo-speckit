@@ -21,4 +21,10 @@ export const registerUser = async (overrides = {}) => {
   return { res, payload };
 };
 
+export const authHeader = (token) => ({ Authorization: `Bearer ${token}` });
+
+export const createList = async (token, name, extra = {}) => {
+  return request(app).post("/todo/lists").set(authHeader(token)).send({ name, ...extra });
+};
+
 export { app, db };

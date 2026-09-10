@@ -36,8 +36,11 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 
 | Rule | Enforcement | Introduced |
 |------|-------------|------------|
-| Login and register are full-screen (no `MenuBar`) | `App.vue` + auth views | Feature 1 |
-| Protected home placeholder welcomes the user by first name and has **Sign out** | `Home.vue` | Feature 1 |
+| Login and register are full-screen (no `MenuBar`) | `App.vue` hides `MenuBar` on those routes | Feature 1; Feature 2 |
+| Dashboard heading **My Lists**; **+ New List** opens a create dialog | `Dashboard.vue` | Feature 2 |
+| Empty lists copy: **"No lists yet. Create your first list."** | `Dashboard.vue` | Feature 2 |
+| List rows have **Edit list** and **Delete list** icon actions (`size="small"`) | `Dashboard.vue` | Feature 2 |
+| `MenuBar` shows signed-in name and **Sign out** | `MenuBar.vue` | Feature 2 |
 | Session stored in `localStorage` key `user` | `Utils.setStore("user", …)` | Feature 1 |
 | Unauthenticated visit to a protected route → login | `router.beforeEach` | Feature 1 |
 | Signed-in visit to login/register → home | `router.beforeEach` | Feature 1 |
@@ -45,4 +48,17 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 
 ## Ownership
 
-Identity only in Feature 1. List/todo row scoping is Feature 2–3. `GET /todo/lists` currently returns `[]` for any authenticated user.
+| Rule | Enforcement | Introduced |
+|------|-------------|------------|
+| `GET /todo/lists` returns only rows with `userId = req.user.id` | `list.controller` `findAll` | Feature 2 |
+| Create `userId` from `req.user.id` only; ignore body `userId` | `list.controller` `create` | Feature 2 |
+| Update/delete only when `id` and `userId` match | `getAccessibleListOrNull` | Feature 2 |
+| Cross-user list access → **`404`**, never `403` | `getAccessibleListOrNull` | ADR-0002; Feature 2 |
+| Lists returned **alphabetically by name** | `findAll` `order: [["name", "ASC"]]` | Feature 2 |
+
+## List validation
+
+| Rule | Enforcement | Introduced |
+|------|-------------|------------|
+| List name trimmed; empty/whitespace → **"List name is required."** | Vue rules + controller | Feature 2 |
+| List name longer than 100 characters → `400` **"List name must be 100 characters or fewer."** | Controller | Feature 2 |

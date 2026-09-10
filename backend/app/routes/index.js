@@ -1,6 +1,6 @@
 import { Router } from "express";
 import authRoutes from "./auth.routes.js";
-import { authenticate } from "../authorization/authorization.js";
+import listRoutes from "./list.routes.js";
 
 const router = Router();
 
@@ -9,10 +9,6 @@ router.get("/health", (_req, res) => {
 });
 
 router.use("/", authRoutes);
-
-// Feature 1 auth probe for US-1.3; Feature 2 replaces this with list CRUD.
-router.get("/lists", [authenticate], (_req, res) => {
-  res.send([]);
-});
+router.use("/lists", listRoutes);
 
 export default router;

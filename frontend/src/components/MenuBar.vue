@@ -7,6 +7,16 @@ import AuthServices from "../services/authServices.js";
 const router = useRouter();
 const user = computed(() => Utils.getStore("user"));
 
+const displayName = computed(() => {
+  const current = user.value;
+  if (!current) {
+    return "";
+  }
+
+  const fullName = [current.fName, current.lName].filter(Boolean).join(" ");
+  return fullName || current.username || "";
+});
+
 async function signOut() {
   try {
     await AuthServices.logoutUser();
@@ -19,10 +29,9 @@ async function signOut() {
 </script>
 
 <template>
-  <v-container class="py-10">
-    <h1 class="text-h4 mb-4">Welcome{{ user?.fName ? `, ${user.fName}` : "" }}</h1>
-    <v-btn color="primary" variant="elevated" class="oc-cta" @click="signOut">
-      Sign out
-    </v-btn>
-  </v-container>
+  <v-app-bar color="primary">
+    <v-spacer />
+    <span class="me-4">{{ displayName }}</span>
+    <v-btn variant="text" class="oc-cta" @click="signOut">Sign out</v-btn>
+  </v-app-bar>
 </template>

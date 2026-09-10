@@ -40,3 +40,21 @@ describe("Feature 1 — User Authentication & Session Management", () => {
     });
   });
 });
+
+describe("Feature 2 — Todo List Management", () => {
+  beforeEach(async () => {
+    localStorage.clear();
+    await router.push({ name: "login" });
+    await router.isReady();
+  });
+
+  describe("US-2.5 — Private lists only", () => {
+    it("Unauthenticated user accesses the dashboard", async () => {
+      Utils.removeItem("user");
+
+      await router.push({ name: "home" });
+
+      expect(router.currentRoute.value.name).toBe("login");
+    });
+  });
+});
