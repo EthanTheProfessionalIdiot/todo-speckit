@@ -1,6 +1,6 @@
 # Data Model Reference
 
-**Status:** Feature 1–2 — Auth + Todo List Management
+**Status:** Feature 1–3 — Auth + Lists + Todo items
 
 ## Tables
 
@@ -36,12 +36,28 @@
 | `createdAt` | DATE | Sequelize timestamps |
 | `updatedAt` | DATE | Sequelize timestamps |
 
+### `todos`
+
+| Field | Type | Rules |
+|-------|------|-------|
+| `id` | INTEGER PK | Auto-increment |
+| `listId` | INTEGER FK | Required; references `lists.id`; cascade delete with parent list |
+| `title` | STRING(255) | Required; trimmed; max 255 characters |
+| `completed` | BOOLEAN | Default `false` |
+| `userId` | INTEGER FK | Required; references `users.id`; set from `req.user.id` on create |
+| `createdAt` | DATE | Sequelize timestamps |
+| `updatedAt` | DATE | Sequelize timestamps |
+
 ## Associations
 
 - `User` hasMany `Session` (`as: "sessions"`, `foreignKey: "userId"`)
 - `Session` belongsTo `User` (`as: "user"`, `foreignKey: "userId"`)
 - `User` hasMany `List` (`as: "lists"`, `foreignKey: "userId"`)
 - `List` belongsTo `User` (`as: "user"`, `foreignKey: "userId"`)
+- `User` hasMany `Todo` (`as: "todos"`, `foreignKey: "userId"`)
+- `Todo` belongsTo `User` (`as: "user"`, `foreignKey: "userId"`)
+- `List` hasMany `Todo` (`as: "todos"`, `foreignKey: "listId"`, `onDelete: CASCADE`)
+- `Todo` belongsTo `List` (`as: "list"`, `foreignKey: "listId"`)
 
 ## Feature provenance
 
@@ -49,3 +65,4 @@
 |-------|------------|
 | Users and sessions | Feature 1 |
 | Lists | Feature 2 |
+| Todos | Feature 3 |

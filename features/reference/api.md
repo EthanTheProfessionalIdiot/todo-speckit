@@ -1,6 +1,6 @@
 # API Reference
 
-**Status:** Feature 1–2 — Auth + Todo List Management
+**Status:** Feature 1–3 — Auth + Lists + Todo items
 
 API mount path: `/todo` (see `backend/server.js`). Authenticated routes require `Authorization: Bearer <token>`.
 
@@ -16,6 +16,10 @@ API mount path: `/todo` (see `backend/server.js`). Authenticated routes require 
 | `POST` | `/todo/lists` | Yes | Create a list owned by the authenticated user |
 | `PUT` | `/todo/lists/:listId` | Yes | Rename an owned list |
 | `DELETE` | `/todo/lists/:listId` | Yes | Delete an owned list |
+| `GET` | `/todo/lists/:listId/todos` | Yes | Fetch todos in an owned list (incomplete first, then `createdAt`) |
+| `POST` | `/todo/lists/:listId/todos` | Yes | Add a todo to an owned list |
+| `PUT` | `/todo/todos/:id` | Yes | Update a todo title and/or `completed` |
+| `DELETE` | `/todo/todos/:id` | Yes | Delete an owned todo |
 
 ## Register / login success (flat JSON)
 
@@ -81,15 +85,39 @@ Username is stored lowercase. Default role is `worker`. Password minimum length 
 
 `GET /todo/lists` returns an array of these objects, sorted alphabetically by `name`.
 
+## Todo create request
+
+```json
+{ "title": "Buy milk" }
+```
+
+`userId` and `listId` in the body are ignored. Ownership is `req.user.id`; `listId` comes from the path after the parent list is verified.
+
+## Todo success (`200` / `201`)
+
+```json
+{
+  "id": 10,
+  "listId": 1,
+  "title": "Buy milk",
+  "completed": false,
+  "userId": 42,
+  "createdAt": "2026-07-02T12:05:00.000Z",
+  "updatedAt": "2026-07-02T12:05:00.000Z"
+}
+```
+
+New todos default to `completed: false`. `GET /todo/lists/:listId/todos` returns an array ordered incomplete first, then by `createdAt` ascending.
+
 ## Errors
 
 `{ "message": "Human-readable explanation." }`
 
 | Status | When |
 |--------|------|
-| `400` | Missing/invalid registration or login fields; duplicate username (`Username is already taken.`); duplicate email (`Email is already registered.`); empty list name; list name longer than 100 characters; invalid `listId` |
+| `400` | Missing/invalid registration or login fields; duplicate username (`Username is already taken.`); duplicate email (`Email is already registered.`); empty list name; list name longer than 100 characters; invalid `listId`; empty todo title; todo title longer than 255 characters |
 | `401` | Invalid username or password; missing, expired, or revoked session token (`Unauthorized! …`) |
-| `404` | List not found or not owned (`List with id=<id> not found.`) |
+| `404` | List or todo not found or not owned (`List with id=<id> not found.` / `Todo with id=<id> not found.`) |
 
 ## Conventions
 
@@ -103,3 +131,4 @@ Username is stored lowercase. Default role is `worker`. Password minimum length 
 |-------|------------|
 | Auth register / login / logout | Feature 1 |
 | Lists CRUD | Feature 2 |
+| Todo items CRUD | Feature 3 |

@@ -40,6 +40,10 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Dashboard heading **My Lists**; **+ New List** opens a create dialog | `Dashboard.vue` | Feature 2 |
 | Empty lists copy: **"No lists yet. Create your first list."** | `Dashboard.vue` | Feature 2 |
 | List rows have **Edit list** and **Delete list** icon actions (`size="small"`) | `Dashboard.vue` | Feature 2 |
+| List rows have an **Items** icon (`View items for &lt;name&gt;`) opening a list-items dialog | `Dashboard.vue` | Feature 3 |
+| Items dialog empty copy: **"No todos in this list yet."** | `Dashboard.vue` | Feature 3 |
+| **+ Add Item** exists only inside the items dialog | `Dashboard.vue` | Feature 3 |
+| Completed todos are struck-through / muted | `Dashboard.vue` | Feature 3 |
 | `MenuBar` shows signed-in name and **Sign out** | `MenuBar.vue` | Feature 2 |
 | Session stored in `localStorage` key `user` | `Utils.setStore("user", …)` | Feature 1 |
 | Unauthenticated visit to a protected route → login | `router.beforeEach` | Feature 1 |
@@ -55,6 +59,12 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Update/delete only when `id` and `userId` match | `getAccessibleListOrNull` | Feature 2 |
 | Cross-user list access → **`404`**, never `403` | `getAccessibleListOrNull` | ADR-0002; Feature 2 |
 | Lists returned **alphabetically by name** | `findAll` `order: [["name", "ASC"]]` | Feature 2 |
+| Todo operations require an owned parent list | `getAccessibleListOrNull` before create/list | Feature 3 |
+| Todo GET/PUT/DELETE scoped by `userId = req.user.id` | `getAccessibleTodoOrNull` | Feature 3 |
+| Cross-user todo or parent-list access → **`404`** | helpers + controllers | ADR-0002; Feature 3 |
+| New todos default **`completed: false`** | `todo.controller` `create` | Feature 3 |
+| Todos ordered incomplete first, then `createdAt` ascending | `findAll` order | Feature 3 |
+| Deleting a list **cascades** to its todos | `List hasMany Todo` `onDelete: CASCADE` | Feature 3 |
 
 ## List validation
 
@@ -62,3 +72,5 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 |------|-------------|------------|
 | List name trimmed; empty/whitespace → **"List name is required."** | Vue rules + controller | Feature 2 |
 | List name longer than 100 characters → `400` **"List name must be 100 characters or fewer."** | Controller | Feature 2 |
+| Todo title trimmed; empty/whitespace → **"Todo title is required."** | Vue rules + controller | Feature 3 |
+| Todo title longer than 255 characters → `400` | Controller | Feature 3 |

@@ -27,4 +27,11 @@ export const createList = async (token, name, extra = {}) => {
   return request(app).post("/todo/lists").set(authHeader(token)).send({ name, ...extra });
 };
 
+export const createTodo = async (token, listId, title, extra = {}) => {
+  return request(app)
+    .post(`/todo/lists/${listId}/todos`)
+    .set(authHeader(token))
+    .send({ title, ...extra });
+};
+
 export { app, db };

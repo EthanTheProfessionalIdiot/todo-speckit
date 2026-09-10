@@ -1,11 +1,14 @@
 /**
  * Feature 2 — Todo List Management
  * Spec: features/feature-2-todo-list-management.md
+ * Feature 3 — Todo List Item Management
+ * Spec: features/feature-3-todo-list-item-management.md
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises } from "@vue/test-utils";
 import Dashboard from "../src/views/Dashboard.vue";
 import ListServices from "../src/services/listServices.js";
+import TodoServices from "../src/services/todoServices.js";
 import { mountWithPlugins } from "./testUtils.js";
 
 vi.mock("../src/services/listServices.js", () => ({
@@ -17,9 +20,19 @@ vi.mock("../src/services/listServices.js", () => ({
   },
 }));
 
+vi.mock("../src/services/todoServices.js", () => ({
+  default: {
+    getTodos: vi.fn(),
+    createTodo: vi.fn(),
+    updateTodo: vi.fn(),
+    deleteTodo: vi.fn(),
+  },
+}));
+
 const groceries = { id: 1, name: "Groceries", userId: 1 };
 const work = { id: 2, name: "Work", userId: 1 };
 const personal = { id: 3, name: "Personal", userId: 1 };
+const buyMilk = { id: 10, listId: 1, title: "Buy milk", completed: false, userId: 1 };
 
 let wrapper;
 
@@ -32,53 +45,70 @@ async function mountDashboard() {
   return mounted;
 }
 
-async function clickButtonWithText(text) {
-  const activeOverlay = document.querySelector(".v-overlay--active");
-  const overlayButton = activeOverlay
-    ? Array.from(activeOverlay.querySelectorAll("button")).find((button) => {
-        return button.textContent.includes(text);
-      })
-    : null;
+function buttonText(button) {
+  return (button.textContent ?? button.text?.() ?? "").replace(/\s+/g, " ").trim();
+}
 
-  if (overlayButton) {
-    overlayButton.click();
-    await flushPromises();
+function activeOverlays() {
+  return Array.from(document.querySelectorAll(".v-overlay--active"));
+}
+
+function vButtons() {
+  return wrapper.findAllComponents({ name: "VBtn" });
+}
+
+async function triggerButton(button) {
+  await button.trigger("click");
+  await flushPromises();
+}
+
+async function clickAriaLabel(label) {
+  const match = vButtons().find((button) => button.attributes("aria-label") === label);
+  if (match) {
+    await triggerButton(match);
     return;
   }
 
-  const vueButton = wrapper.findAll("button").find((button) => {
-    return button.text().includes(text);
-  });
-  if (vueButton) {
-    await vueButton.trigger("click");
-    await flushPromises();
-    return;
-  }
-
-  const element = Array.from(document.querySelectorAll("button")).find((button) => {
-    return button.textContent.includes(text);
-  });
+  const element = document.querySelector(`[aria-label="${label}"]`);
   expect(element).toBeTruthy();
+  const nested = vButtons().find((button) => button.element.contains(element));
+  if (nested) {
+    await triggerButton(nested);
+    return;
+  }
+
   element.click();
   await flushPromises();
 }
 
-async function setVisibleListName(value) {
-  const activeOverlay = document.querySelector(".v-overlay--active");
-  const input = activeOverlay?.querySelector("input");
-  expect(input).toBeTruthy();
+async function clickButtonWithText(text) {
+  const overlays = activeOverlays();
+  const search = overlays.length
+    ? [...overlays].reverse().flatMap((overlay) => {
+        return vButtons().filter((button) => overlay.contains(button.element));
+      })
+    : vButtons();
 
-  const field = wrapper.findAllComponents({ name: "VTextField" }).find((component) => {
-    return component.element.contains(input);
-  });
-  if (field) {
-    await field.setValue(value);
-    await flushPromises();
-    return;
+  const exact = search.find((button) => buttonText(button) === text);
+  const match = exact ?? search.find((button) => buttonText(button).includes(text));
+  expect(match).toBeTruthy();
+  await triggerButton(match);
+}
+
+async function setVisibleListName(value) {
+  const overlays = activeOverlays();
+  const fields = wrapper.findAllComponents({ name: "VTextField" });
+  let field;
+
+  for (let i = overlays.length - 1; i >= 0; i -= 1) {
+    field = fields.find((component) => overlays[i].contains(component.element));
+    if (field) {
+      break;
+    }
   }
 
-  input.value = value;
-  input.dispatchEvent(new Event("input", { bubbles: true }));
+  expect(field).toBeTruthy();
+  await field.setValue(value);
   await flushPromises();
 }
 
@@ -91,6 +121,10 @@ describe("Feature 2 — Todo List Management", () => {
       data: { ...groceries, name: "Shopping" },
     });
     ListServices.deleteList.mockResolvedValue({ data: { message: "deleted" } });
+    TodoServices.getTodos.mockResolvedValue({ data: [] });
+    TodoServices.createTodo.mockResolvedValue({ data: buyMilk });
+    TodoServices.updateTodo.mockResolvedValue({ data: { ...buyMilk, completed: true } });
+    TodoServices.deleteTodo.mockResolvedValue({ data: { message: "deleted" } });
   });
 
   afterEach(() => {
@@ -186,6 +220,174 @@ describe("Feature 2 — Todo List Management", () => {
 
       expect(ListServices.deleteList).toHaveBeenCalledWith(1);
       expect(wrapper.text()).not.toContain("Groceries");
+    });
+  });
+});
+
+describe("Feature 3 — Todo List Item Management", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    ListServices.getLists.mockResolvedValue({ data: [groceries] });
+    ListServices.createList.mockResolvedValue({ data: groceries });
+    ListServices.updateList.mockResolvedValue({ data: groceries });
+    ListServices.deleteList.mockResolvedValue({ data: { message: "deleted" } });
+    TodoServices.getTodos.mockResolvedValue({ data: [] });
+    TodoServices.createTodo.mockResolvedValue({ data: buyMilk });
+    TodoServices.updateTodo.mockResolvedValue({ data: { ...buyMilk, title: "Buy oat milk" } });
+    TodoServices.deleteTodo.mockResolvedValue({ data: { message: "deleted" } });
+  });
+
+  afterEach(() => {
+    wrapper?.unmount();
+  });
+
+  describe("US-3.1 — Add tasks to a list", () => {
+    it("User adds a todo to a list via dialog", async () => {
+      TodoServices.getTodos
+        .mockResolvedValueOnce({ data: [] })
+        .mockResolvedValueOnce({ data: [buyMilk] });
+
+      await mountDashboard();
+      await clickAriaLabel("View items for Groceries");
+      await clickButtonWithText("+ Add Item");
+      await setVisibleListName("Buy milk");
+      await clickButtonWithText("Add");
+
+      expect(TodoServices.createTodo).toHaveBeenCalledWith(1, { title: "Buy milk" });
+      expect(document.body.textContent).toContain("Buy milk");
+    });
+
+    it("User adds a todo with an empty title", async () => {
+      await mountDashboard();
+      await clickAriaLabel("View items for Groceries");
+      await clickButtonWithText("+ Add Item");
+      await clickButtonWithText("Add");
+
+      expect(document.body.textContent).toContain("Todo title is required.");
+      expect(TodoServices.createTodo).not.toHaveBeenCalled();
+    });
+
+    it("Add item is only available inside the items dialog", async () => {
+      await mountDashboard();
+
+      const listsCard = wrapper.find(".v-card");
+      expect(listsCard.text()).toContain("My Lists");
+      expect(listsCard.text()).not.toContain("+ Add Item");
+      expect(activeOverlays()).toHaveLength(0);
+    });
+  });
+
+  describe("US-3.2 — View tasks in a list", () => {
+    it("List items dialog shows empty state", async () => {
+      ListServices.getLists.mockResolvedValue({ data: [personal] });
+      TodoServices.getTodos.mockResolvedValue({ data: [] });
+
+      await mountDashboard();
+      await clickAriaLabel("View items for Personal");
+
+      expect(document.body.textContent).toContain("No todos in this list yet.");
+    });
+
+    it("User opens items for different lists", async () => {
+      ListServices.getLists.mockResolvedValue({ data: [work, personal] });
+      TodoServices.getTodos.mockImplementation((listId) => {
+        if (listId === personal.id) {
+          return Promise.resolve({
+            data: [{ id: 21, listId: 3, title: "Call mom", completed: false, userId: 1 }],
+          });
+        }
+        return Promise.resolve({
+          data: [
+            { id: 22, listId: 2, title: "Email client", completed: false, userId: 1 },
+            { id: 23, listId: 2, title: "Write report", completed: false, userId: 1 },
+          ],
+        });
+      });
+
+      await mountDashboard();
+      await clickAriaLabel("View items for Personal");
+      expect(document.body.textContent).toContain("Call mom");
+      expect(document.body.textContent).not.toContain("Email client");
+
+      await clickButtonWithText("Close");
+      await clickAriaLabel("View items for Work");
+
+      expect(document.body.textContent).toContain("Email client");
+      expect(document.body.textContent).toContain("Write report");
+      expect(document.body.textContent).not.toContain("Call mom");
+    });
+  });
+
+  describe("US-3.3 — Complete tasks", () => {
+    it("User marks a todo as complete", async () => {
+      TodoServices.getTodos
+        .mockResolvedValueOnce({ data: [buyMilk] })
+        .mockResolvedValueOnce({ data: [{ ...buyMilk, completed: true }] });
+      TodoServices.updateTodo.mockResolvedValue({ data: { ...buyMilk, completed: true } });
+
+      await mountDashboard();
+      await clickAriaLabel("View items for Groceries");
+
+      const checkbox = document.querySelector('input[type="checkbox"]');
+      expect(checkbox).toBeTruthy();
+      checkbox.dispatchEvent(new Event("change", { bubbles: true }));
+      await wrapper.findComponent({ name: "VCheckbox" }).vm.$emit("update:modelValue", true);
+      await flushPromises();
+
+      expect(TodoServices.updateTodo).toHaveBeenCalledWith(10, { completed: true });
+      expect(document.body.querySelector(".text-decoration-line-through")).toBeTruthy();
+    });
+
+    it("User marks a completed todo as incomplete", async () => {
+      const completedMilk = { ...buyMilk, completed: true };
+      TodoServices.getTodos
+        .mockResolvedValueOnce({ data: [completedMilk] })
+        .mockResolvedValueOnce({ data: [buyMilk] });
+      TodoServices.updateTodo.mockResolvedValue({ data: buyMilk });
+
+      await mountDashboard();
+      await clickAriaLabel("View items for Groceries");
+
+      await wrapper.findComponent({ name: "VCheckbox" }).vm.$emit("update:modelValue", false);
+      await flushPromises();
+
+      expect(TodoServices.updateTodo).toHaveBeenCalledWith(10, { completed: false });
+    });
+  });
+
+  describe("US-3.4 — Edit and remove tasks", () => {
+    it("User edits a todo title", async () => {
+      TodoServices.getTodos
+        .mockResolvedValueOnce({ data: [buyMilk] })
+        .mockResolvedValueOnce({ data: [{ ...buyMilk, title: "Buy oat milk" }] });
+
+      await mountDashboard();
+      await clickAriaLabel("View items for Groceries");
+      await clickAriaLabel("Edit todo");
+      await setVisibleListName("Buy oat milk");
+      await clickButtonWithText("Save");
+
+      expect(TodoServices.updateTodo).toHaveBeenCalledWith(10, { title: "Buy oat milk" });
+      expect(document.body.textContent).toContain("Buy oat milk");
+    });
+
+    it("User deletes a todo", async () => {
+      TodoServices.getTodos
+        .mockResolvedValueOnce({ data: [buyMilk] })
+        .mockResolvedValueOnce({ data: [] });
+
+      await mountDashboard();
+      await clickAriaLabel("View items for Groceries");
+      await clickAriaLabel("Delete todo");
+      await clickButtonWithText("Delete");
+
+      expect(TodoServices.deleteTodo).toHaveBeenCalledWith(10);
+      const itemsDialog = activeOverlays().find((overlay) => {
+        return overlay.textContent.includes("Groceries — Items");
+      });
+      expect(itemsDialog).toBeTruthy();
+      expect(itemsDialog.textContent).toContain("No todos in this list yet.");
+      expect(itemsDialog.textContent).not.toContain("Buy milk");
     });
   });
 });
