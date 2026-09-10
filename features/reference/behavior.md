@@ -18,6 +18,9 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Missing / expired / revoked token → **`401`** | `authenticate` | Feature 1 |
 | Default role for new users is **`worker`** | `User.create` | Feature 1 |
 | Authenticated requests resolve `req.user.id` from the session | `authenticate` sets `req.user` | Feature 1 |
+| Profile GET/PUT only when `:id = req.user.id`; otherwise **`404`** | `getAccessibleUserOrNull` | Feature 4 |
+| Profile password omitted on `PUT` leaves the existing hash unchanged | `user.controller` `update` | Feature 4 |
+| Profile username saved as `trim().toLowerCase()` | `user.controller` `update` | Feature 4 |
 
 ## Validation
 
@@ -44,7 +47,9 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | Items dialog empty copy: **"No todos in this list yet."** | `Dashboard.vue` | Feature 3 |
 | **+ Add Item** exists only inside the items dialog | `Dashboard.vue` | Feature 3 |
 | Completed todos are struck-through / muted | `Dashboard.vue` | Feature 3 |
-| `MenuBar` shows signed-in name and **Sign out** | `MenuBar.vue` | Feature 2 |
+| `MenuBar` user icon opens a profile dropdown (full name, username, email); **Edit Profile** and **Log out** live in the dropdown | `MenuBar.vue` | Feature 4 |
+| No standalone **Sign out** on the app bar | `MenuBar.vue` | Feature 4 |
+| After profile save, refresh `localStorage` `user` and dispatch `user-logged-in` | `MenuBar.vue` | Feature 4 |
 | Session stored in `localStorage` key `user` | `Utils.setStore("user", …)` | Feature 1 |
 | Unauthenticated visit to a protected route → login | `router.beforeEach` | Feature 1 |
 | Signed-in visit to login/register → home | `router.beforeEach` | Feature 1 |
@@ -65,6 +70,7 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | New todos default **`completed: false`** | `todo.controller` `create` | Feature 3 |
 | Todos ordered incomplete first, then `createdAt` ascending | `findAll` order | Feature 3 |
 | Deleting a list **cascades** to its todos | `List hasMany Todo` `onDelete: CASCADE` | Feature 3 |
+| Profile read/update only for `req.user.id` | `getAccessibleUserOrNull` | Feature 4 |
 
 ## List validation
 
@@ -74,3 +80,6 @@ They do **not** authorize new scope — implement only from `features/feature-*.
 | List name longer than 100 characters → `400` **"List name must be 100 characters or fewer."** | Controller | Feature 2 |
 | Todo title trimmed; empty/whitespace → **"Todo title is required."** | Vue rules + controller | Feature 3 |
 | Todo title longer than 255 characters → `400` | Controller | Feature 3 |
+| Profile required fields trimmed; empty first name → **"First name is required."** | Vue rules + `user.controller` | Feature 4 |
+| Optional profile password, when present, must be at least 8 characters | Vue rules + controller | Feature 4 |
+| Edit Profile uses shared `emailRules` | `MenuBar.vue` | Feature 4 |

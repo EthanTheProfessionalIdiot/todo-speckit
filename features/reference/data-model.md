@@ -1,6 +1,6 @@
 # Data Model Reference
 
-**Status:** Feature 1–3 — Auth + Lists + Todo items
+**Status:** Feature 1–4 — Auth + Lists + Todo items + Profile
 
 ## Tables
 
@@ -9,12 +9,12 @@
 | Field | Type | Rules |
 |-------|------|-------|
 | `id` | INTEGER PK | Auto-increment |
-| `fName` | STRING | Required |
-| `lName` | STRING | Required |
-| `email` | STRING | Required, unique |
-| `username` | STRING(100) | Required, unique; stored lowercase |
-| `password` | STRING(255) | Required; bcrypt hash only; excluded from default scope |
-| `role` | STRING(20) | Default `worker` |
+| `fName` | STRING | Required; editable via `PUT /todo/users/:id` |
+| `lName` | STRING | Required; editable via `PUT /todo/users/:id` |
+| `email` | STRING | Required, unique; editable via profile update |
+| `username` | STRING(100) | Required, unique; stored lowercase; editable via profile update |
+| `password` | STRING(255) | Required; bcrypt hash only; excluded from default scope; optional on profile update |
+| `role` | STRING(20) | Default `worker`; read-only on profile update |
 
 ### `sessions`
 
@@ -66,3 +66,4 @@
 | Users and sessions | Feature 1 |
 | Lists | Feature 2 |
 | Todos | Feature 3 |
+| Profile update of existing user fields | Feature 4 |
